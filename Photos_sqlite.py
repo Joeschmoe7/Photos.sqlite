@@ -1,5 +1,4 @@
-#Photos.sqlite to XLSX!  #TEST
-                #TEST Github changes
+#Photos.sqlite to XLSX!  
 # Resources used:
 # https://smarterforensics.com/2020/08/does-photos-sqlite-have-relations-with-cameramessagesapp-by-scott-koenig/    
 # https://digitalcorpora.org/
@@ -11,11 +10,7 @@ import File_Picker
 import sys
 import os
 
-
-fname = File_Picker.fname
-savefname = File_Picker.savefname
-
-con = sqlite3.connect(fname)
+con = sqlite3.connect(File_Picker.fname)
 cursor = con.cursor()
 
 #test if table exists
@@ -24,45 +19,53 @@ if cursor.fetchone()[0]==1:
     tableOne = "ZGENERICASSET"
 else:
     tableOne = "ZASSET"
-      
-df = pd.read_sql_query("SELECT Z_PK, ZFILENAME, ZDIRECTORY, ZDATECREATED, ZHEIGHT,\
-                       ZWIDTH, ZLATITUDE, ZLONGITUDE, ZLASTSHAREDDATE, ZTRASHEDSTATE, ZTRASHEDDATE FROM " + tableOne , con)
-df = df.rename(columns={'Z_PK': 'Z-PK', 'ZFILENAME':'File Name', 'ZDIRECTORY':'Directory',\
+
+iosAssets = "Z_PK, ZFILENAME, ZDIRECTORY, ZDATECREATED, ZHEIGHT,\
+                ZWIDTH, ZLATITUDE, ZLONGITUDE, ZLASTSHAREDDATE,\
+                 ZTRASHEDSTATE, ZTRASHEDDATE"
+iosAssetsRenamed = {'Z_PK': 'Z-PK', 'ZFILENAME':'File Name', 'ZDIRECTORY':'Directory',\
                         'ZDATECREATED': 'Created Date (UTC)',\
                         'ZHEIGHT':'Height','ZWIDTH': 'Width','ZLATITUDE': 'Latitude',\
                         'ZLONGITUDE': 'Longitude','ZLASTSHAREDDATE': 'Last Shared Date (UTC)',\
-                         'ZTRASHEDSTATE': 'Deleted', 'ZTRASHEDDATE': 'Deleted Date (UTC)'})
-    
+                         'ZTRASHEDSTATE': 'Deleted', 'ZTRASHEDDATE': 'Deleted Date (UTC)'}
+      
+df = pd.read_sql_query("SELECT " + iosAssets + " FROM " + tableOne , con)  #select tables
+
+df = df.rename(columns=iosAssetsRenamed)  #rename column headers
+
 df2 = pd.read_sql_query("SELECT ZTITLE FROM ZGENERICALBUM", con)
 df2 = df2.rename(columns={'ZTITLE': 'Album Name'})
 df3 = pd.read_sql_query("SELECT ZORIGINALFILENAME, ZCREATORBUNDLEID, ZIMPORTEDBY FROM ZADDITIONALASSETATTRIBUTES", con)
 df3 = df3.rename(columns={'ZORIGINALFILENAME': 'Original File Name','ZCREATORBUNDLEID': 'Received From', 'ZIMPORTEDBY': 'Application'})
-    
-df['Deleted'] = df["Deleted"].map(str)
-df["Deleted"] = df["Deleted"].replace('0', "No")
-df["Deleted"] = df["Deleted"].replace('1', "Yes")
-    
-df3['Application'] = df3["Application"].map(str)
-df3["Application"] = df3["Application"].replace('1', "Rear Camera")
-df3["Application"] = df3["Application"].replace('2', "Front Camera")
-df3["Application"] = df3["Application"].replace('3', "Other")
-df3["Application"] = df3["Application"].replace('6', "Saved from App")
-df3["Application"] = df3["Application"].replace('8', "Rear Camera")
-df3["Application"] = df3["Application"].replace('9', "Saved from SMS/MMS")
 
-    
-unixTS = 978307200 #unix time  #Convert IOS times to Unix.
-    
-df['Created Date (UTC)'] = df['Created Date (UTC)'] + unixTS
-df['Created Date (UTC)'] = pd.to_datetime(df['Created Date (UTC)'], unit='s')
-df['Last Shared Date (UTC)'] = df['Last Shared Date (UTC)'] + unixTS
-df['Last Shared Date (UTC)'] = pd.to_datetime(df['Last Shared Date (UTC)'], unit='s')
-df['Deleted Date (UTC)'] = df['Deleted Date (UTC)'] + unixTS
-df['Deleted Date (UTC)'] = pd.to_datetime(df['Deleted Date (UTC)'], unit='s')
+def remapValues():    
+    df['Deleted'] = df["Deleted"].map(str)
+    df["Deleted"] = df["Deleted"].replace('0', "No")
+    df["Deleted"] = df["Deleted"].replace('1', "Yes")
+        
+    df3['Application'] = df3["Application"].map(str)
+    df3["Application"] = df3["Application"].replace('1', "Rear Camera")
+    df3["Application"] = df3["Application"].replace('2', "Front Camera")
+    df3["Application"] = df3["Application"].replace('3', "Other")
+    df3["Application"] = df3["Application"].replace('6', "Saved from App")
+    df3["Application"] = df3["Application"].replace('8', "Rear Camera")
+    df3["Application"] = df3["Application"].replace('9', "Saved from SMS/MMS")
+remapValues()
+
+def convertTime():    
+    unixTS = 978307200 #unix time  #Convert IOS times to Unix.
+        
+    df['Created Date (UTC)'] = df['Created Date (UTC)'] + unixTS
+    df['Created Date (UTC)'] = pd.to_datetime(df['Created Date (UTC)'], unit='s')
+    df['Last Shared Date (UTC)'] = df['Last Shared Date (UTC)'] + unixTS
+    df['Last Shared Date (UTC)'] = pd.to_datetime(df['Last Shared Date (UTC)'], unit='s')
+    df['Deleted Date (UTC)'] = df['Deleted Date (UTC)'] + unixTS
+    df['Deleted Date (UTC)'] = pd.to_datetime(df['Deleted Date (UTC)'], unit='s')
+convertTime()
 
 def saveXLSX():
     
-    writer = pd.ExcelWriter(savefname, engine='xlsxwriter')
+    writer = pd.ExcelWriter(File_Picker.savefname, engine='xlsxwriter')
     workbook = writer.book
     left_format = workbook.add_format()
     center_format = workbook.add_format()
