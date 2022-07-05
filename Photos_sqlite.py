@@ -9,6 +9,7 @@ import pandas as pd
 import File_Picker
 import sys
 import os
+import SQL_Columns
 
 con = sqlite3.connect(File_Picker.fname)
 cursor = con.cursor()
@@ -20,18 +21,11 @@ if cursor.fetchone()[0]==1:
 else:
     tableOne = "ZASSET"
 
-iosAssets = "Z_PK, ZFILENAME, ZDIRECTORY, ZDATECREATED, ZHEIGHT,\
-                ZWIDTH, ZLATITUDE, ZLONGITUDE, ZLASTSHAREDDATE,\
-                 ZTRASHEDSTATE, ZTRASHEDDATE"
-iosAssetsRenamed = {'Z_PK': 'Z-PK', 'ZFILENAME':'File Name', 'ZDIRECTORY':'Directory',\
-                        'ZDATECREATED': 'Created Date (UTC)',\
-                        'ZHEIGHT':'Height','ZWIDTH': 'Width','ZLATITUDE': 'Latitude',\
-                        'ZLONGITUDE': 'Longitude','ZLASTSHAREDDATE': 'Last Shared Date (UTC)',\
-                         'ZTRASHEDSTATE': 'Deleted', 'ZTRASHEDDATE': 'Deleted Date (UTC)'}
-      
-df = pd.read_sql_query("SELECT " + iosAssets + " FROM " + tableOne , con)  #select tables
 
-df = df.rename(columns=iosAssetsRenamed)  #rename column headers
+      
+df = pd.read_sql_query("SELECT " + SQL_Columns.iosAssets + " FROM " + tableOne , con)  #select tables
+
+df = df.rename(columns=SQL_Columns.iosAssetsRenamed)  #rename column headers
 
 df2 = pd.read_sql_query("SELECT ZTITLE FROM ZGENERICALBUM", con)
 df2 = df2.rename(columns={'ZTITLE': 'Album Name'})
